@@ -50,6 +50,48 @@ def compute_profit(incentive_pool, liquidity, equilibrium_liquidity, gas_fee, ma
     else:
         return 0
 
+
+def read_liquidity_pools():
+    return pd.read_csv("C:/dev/hyphenArbitrage/src/resources/supported_pools.csv")
+
+
+def read_supported_assets():
+    return pd.read_csv("C:/dev/hyphenArbitrage/src/resources/supported_assets.csv")
+
+
+def get_rpcs(liquidity_pools):
+    rpcs = {}
+    for index, row in liquidity_pools.iterrows():
+        rpcs[row["Blockchain"]] = BlockchainRpcApi(row["Blockchain"], row["PoolAddress"])
+    return rpcs
+
+
+def check_arbs():
+    liquidity_pools = read_liquidity_pools()
+    supported_assets = read_supported_assets()
+    rpcs = get_rpcs(liquidity_pools)
+    max_profit = -1
+    best_opportunity_blockchain = ''
+    best_opportunity_asset = ''
+    for blockchain in rpcs.keys():
+        api = rpcs[blockchain]
+        for i, supported_assets_row in supported_assets.iterrows():
+            asset = supported_assets_row["Address"]
+            equilibrium_liquidity = api.get_equilibrium_liquidity(asset)
+            liquidity = api.get_current_liquidity(asset)
+            incentive_pool = api.get_rewards(asset)
+            profit = compute_profit(incentive_pool, liquidity, equilibrium_liquidity, 0)
+            # TODO: get price to fiat to compare profits
+            profit_in_usd = profit
+            if profit_in_usd > max_profit:
+                max_profit = profit
+                best_opportunity_blockchain = blockchain
+                best_opportunity_asset = asset
+                print("Arbitrage detected for", supported_assets_row["Asset"], "on", blockchain, "- Profit=$",
+                      round(profit_in_usd / 1e18, 4))
+    return max_profit, best_opportunity_blockchain, best_opportunity_asset
+
+
 def check_arb(asset):
     eth = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
     api = BlockchainRpcApi("Ethereum", "0x2A5c2568b10A0E826BfA892Cf21BA7218310180b", "0x")

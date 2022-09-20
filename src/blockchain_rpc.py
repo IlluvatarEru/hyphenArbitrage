@@ -53,6 +53,8 @@ class BlockchainRpcApi:
             blockchain_gateway = 'fuse'
         elif self.blockchain == 'Ethereum':
             blockchain_gateway = 'eth'
+        elif self.blockchain == 'Optimism':
+            blockchain_gateway = 'optimism'
         else:
             raise Exception('Blockchain not supported:', self.blockchain)
         return 'https://' + blockchain_gateway + '-mainnet.gateway.pokt.network/v1/lb/' + self.key
