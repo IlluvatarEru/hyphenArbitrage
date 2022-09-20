@@ -77,4 +77,3 @@ class BlockchainRpcApi:
 
     def get_equilibrium_liquidity(self, asset_address):
         return self.liquidity_provider_contract.functions.getSuppliedLiquidityByToken(asset_address).call()
-
