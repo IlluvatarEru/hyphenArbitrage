@@ -7,14 +7,13 @@ from src.constants import PATH_TO_PASSWORDS, PATH_TO_DATA
 
 
 class BlockchainRpcApi:
-    def __init__(self, blockchain, liquidity_pool, wallet):
+    def __init__(self, blockchain, liquidity_pool):
         self.liquidity_pool_contract = None
         self.liquidity_provider_contract = None
         self.w3 = None
         self.url = None
         self.blockchain = blockchain
         self.liquidity_pool = liquidity_pool
-        self.wallet = wallet
         self.key = Path(PATH_TO_PASSWORDS + 'POKT_KEY.txt').read_text().replace('\n', '')
         self.liquidity_pool_abi = json.load(open(PATH_TO_DATA + 'liquidity_pool_abi.json'))
         self.liquidity_provider_abi = json.load(open(PATH_TO_DATA + 'liquidity_provider_abi.json'))
