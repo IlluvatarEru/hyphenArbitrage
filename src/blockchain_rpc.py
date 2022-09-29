@@ -10,6 +10,7 @@ class BlockchainRpcApi:
     def __init__(self, blockchain, liquidity_pool):
         self.liquidity_pool_contract = None
         self.liquidity_provider_contract = None
+        self.token_manager_contract = None
         self.w3 = None
         self.url = None
         self.blockchain = blockchain
@@ -17,9 +18,11 @@ class BlockchainRpcApi:
         self.key = Path(PATH_TO_PASSWORDS + 'POKT_KEY.txt').read_text().replace('\n', '')
         self.liquidity_pool_abi = json.load(open(PATH_TO_DATA + 'liquidity_pool_abi.json'))
         self.liquidity_provider_abi = json.load(open(PATH_TO_DATA + 'liquidity_provider_abi.json'))
+        self.token_manager_abi = json.load(open(PATH_TO_DATA + 'token_manager_abi.json'))
         self.init_w3()
         self.create_liquidity_pool_contract()
         self.create_liquidity_provider_contract()
+        self.create_token_manager_contract()
 
     def init_w3(self):
         if self.blockchain == 'Arbitrum':
@@ -67,8 +70,14 @@ class BlockchainRpcApi:
     def get_rewards(self, asset_address):
         return self.liquidity_pool_contract.functions.incentivePool(asset_address).call()
 
+    def get_base_gas(self):
+        return self.liquidity_pool_contract.functions.baseGas().call()
+
     def get_liquidity_provider(self):
         return self.liquidity_pool_contract.functions.liquidityProviders().call()
+
+    def get_token_manager(self):
+        return self.liquidity_pool_contract.functions.tokenManager().call()
 
     def create_liquidity_provider_contract(self):
         self.liquidity_provider_contract = self.w3.eth.contract(address=self.get_liquidity_provider(),
@@ -76,3 +85,15 @@ class BlockchainRpcApi:
 
     def get_equilibrium_liquidity(self, asset_address):
         return self.liquidity_provider_contract.functions.getSuppliedLiquidityByToken(asset_address).call()
+
+    def create_token_manager_contract(self):
+        self.token_manager_contract = self.w3.eth.contract(address=self.get_token_manager(),
+                                                           abi=self.token_manager_abi)
+
+    def get_tokens_info(self, asset_address):
+        tokens_info = self.token_manager_contract.functions.getTokensInfo(asset_address).call()
+        keys = ['transferOverhead', 'supportedToken', 'equilibriumFee', 'maxFee', 'transferConfig']
+        return dict(zip(keys, tokens_info))
+
+    def get_excess_state_transfer_fee(self, asset_address):
+        return self.token_manager_contract.functions.excessStateTransferFeePerc(asset_address).call()
