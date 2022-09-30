@@ -2,7 +2,8 @@ from src.blockchain_rpc import BlockchainRpcApi
 from src.coingecko import get_prices
 from src.hyphen_liquidity_pools import compute_amount_received, compute_received_reward, compute_transfer_fee, \
     compute_imbalance
-from src.read import read_liquidity_pools, read_supported_assets
+from src.hyphen_rpc import HyphenRpcApi
+from src.read import read_liquidity_pools, read_supported_assets, read_chain_ids
 
 
 def get_wallet_balance_eth():
@@ -83,6 +84,7 @@ def check_arbitrage_opportunities():
     """
     liquidity_pools = read_liquidity_pools()
     supported_assets = read_supported_assets()
+    chain_ids = read_chain_ids()
     rpcs = get_rpcs(liquidity_pools)
     max_profit = -1
     amount_in = 0.0
@@ -94,8 +96,10 @@ def check_arbitrage_opportunities():
     wallet_balance_usdc = wallet_balance_eth * asset_prices["USDC"]
     for blockchain_from in rpcs.keys():
         api_from = rpcs[blockchain_from]
+        chain_id_from = chain_ids[blockchain_from]
         for blockchain_to in rpcs.keys():
             api_to = rpcs[blockchain_to]
+            chain_id_to = chain_ids[blockchain_to]
             for asset_symbol in supported_assets['Asset'].unique():
                 supported_asset = supported_assets.loc[supported_assets['Asset'] == asset_symbol]
                 asset_from = supported_asset.loc[supported_asset['Blockchain'] == blockchain_from, 'Address']
@@ -113,15 +117,18 @@ def check_arbitrage_opportunities():
                 liquidity_to = api_to.get_current_liquidity(asset_to)
                 tokens_info_to = api_to.get_tokens_info(asset_to)
                 excess_state_transfer_fee_to = api_to.get_excess_state_transfer_fee(asset_to)
-                baseGas =  api_to.get_base_gas()
+                # TODO: Estimate gas
+                baseGas = api_to.get_base_gas()
                 gas = tokens_info_to['transferOverhead'] + baseGas
+                hypen_rpc = HyphenRpcApi(chain_id_from, chain_id_to, asset_from, 1e18)
+                true_gas = hypen_rpc.get_gas_fee()*1e18
 
                 profit_for_max_amount_in, max_amount_in = compute_max_profit(incentive_pool,
                                                                              liquidity_from,
                                                                              equilibrium_liquidity_from,
                                                                              liquidity_to,
                                                                              equilibrium_liquidity_to,
-                                                                             gas_fee=gas,
+                                                                             gas_fee=true_gas,
                                                                              max_fee=tokens_info_to['maxFee'],
                                                                              equilibrium_fee=tokens_info_to[
                                                                                  'equilibriumFee'],
