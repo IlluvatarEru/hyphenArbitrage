@@ -53,11 +53,11 @@ def compute_profit(amount, incentive_pool,
         # compute the transfer fee from TO POOL
         transfer_fee = compute_transfer_fee(amount, liquidity_to, equilibrium_liquidity_to, max_fee, equilibrium_fee,
                                             excess_state_transfer_fee, depth)
-        print("reward", reward)
-        print("transfer_fee", '{:.20f}'.format(transfer_fee))
+        # print("reward", reward)
+        # print("transfer_fee", '{:.20f}'.format(transfer_fee))
         # compute the amount received on the toChain
         amount_received = compute_amount_received(amount + reward, transfer_fee, gas_fee)
-        print("amount_received", amount_received)
+        # print("amount_received", amount_received)
         # compute what you would get by bridging back to the fromChain using native bridges or others
         bridged_back_amount = compute_bridged_back_amount(amount_received)
         return bridged_back_amount - amount
@@ -86,7 +86,8 @@ def check_arbitrage_opportunities():
     supported_assets = read_supported_assets()
     chain_ids = read_chain_ids()
     rpcs = get_rpcs(liquidity_pools)
-    max_profit = -1
+    blockchains = list(rpcs.keys())
+    max_profit = 0.0
     amount_in = 0.0
     best_opportunity_blockchain = ''
     best_opportunity_asset = ''
@@ -94,23 +95,27 @@ def check_arbitrage_opportunities():
     asset_prices = get_prices(assets)
     wallet_balance_eth = get_wallet_balance_eth()
     wallet_balance_usdc = wallet_balance_eth * asset_prices["USDC"]
-    for blockchain_from in rpcs.keys():
+    for blockchain_from in blockchains:
         api_from = rpcs[blockchain_from]
         chain_id_from = chain_ids[blockchain_from]
-        for blockchain_to in rpcs.keys():
+        blockchains_to = [chain for chain in blockchains if chain != blockchain_from]
+        supported_assets_from = supported_assets.loc[
+            supported_assets['Blockchain'] == blockchain_from, 'Asset'].unique()
+        for blockchain_to in blockchains_to:
             api_to = rpcs[blockchain_to]
             chain_id_to = chain_ids[blockchain_to]
-            for asset_symbol in supported_assets['Asset'].unique():
+            supported_assets_to = supported_assets.loc[
+                supported_assets['Blockchain'] == blockchain_to, 'Asset'].unique()
+            supported_assets_bridge = list(set(supported_assets_from) & set(supported_assets_to))
+            for asset_symbol in supported_assets_bridge:
                 supported_asset = supported_assets.loc[supported_assets['Asset'] == asset_symbol]
-                asset_from = supported_asset.loc[supported_asset['Blockchain'] == blockchain_from, 'Address']
-                asset_to = supported_asset.loc[supported_asset['Blockchain'] == blockchain_to, 'Address']
+                asset_from = supported_asset.loc[supported_asset['Blockchain'] == blockchain_from, 'Address'].values[0]
+                asset_to = supported_asset.loc[supported_asset['Blockchain'] == blockchain_to, 'Address'].values[0]
                 asset_price = asset_prices[asset_symbol]
                 # blockchain-from data
                 equilibrium_liquidity_from = api_from.get_equilibrium_liquidity(asset_from)
                 liquidity_from = api_from.get_current_liquidity(asset_from)
                 incentive_pool = api_from.get_rewards(asset_from)
-                tokens_info_from = api_from.get_tokens_info(asset_from)
-                excess_state_transfer_fee_from = api_from.get_excess_state_transfer_fee(asset_from)
 
                 # blockchain-to data
                 equilibrium_liquidity_to = api_to.get_equilibrium_liquidity(asset_to)
@@ -120,8 +125,8 @@ def check_arbitrage_opportunities():
                 # TODO: Estimate gas
                 baseGas = api_to.get_base_gas()
                 gas = tokens_info_to['transferOverhead'] + baseGas
-                hypen_rpc = HyphenRpcApi(chain_id_from, chain_id_to, asset_from, 1e18)
-                true_gas = hypen_rpc.get_gas_fee()*1e18
+                hypen_rpc = HyphenRpcApi(chain_id_from, chain_id_to, asset_from, 1)
+                true_gas = hypen_rpc.get_gas_fee() * 1e18
 
                 profit_for_max_amount_in, max_amount_in = compute_max_profit(incentive_pool,
                                                                              liquidity_from,
@@ -146,14 +151,15 @@ def check_arbitrage_opportunities():
                 else:
                     profit = profit_for_max_amount_in
                     amount_in = max_amount_in
-
+                profit /= 1e18
+                amount_in /= 1e18
                 profit_in_usd = profit * asset_price
                 if profit_in_usd > max_profit:
                     max_profit = profit_in_usd
                     best_opportunity_blockchain = blockchain_from
                     best_opportunity_asset = asset_from
-                    print('Arbitrage detected for', asset_symbol, 'on', blockchain_from + ":",
+                    print('New best arbitrage detected for', asset_symbol, 'on', blockchain_from + ":",
                           '\n    - Profit=$', round(profit_in_usd, 4),
-                          '\n    - amount_in=', round(amount_in / 1e18, 4), asset_symbol,
-                          "~$", round(amount_in * asset_price / 1e18, 0))
+                          '\n    - Amount In=', round(amount_in, 4), asset_symbol,
+                          "~$", round(amount_in * asset_price, 0))
     return max_profit, amount_in, best_opportunity_blockchain, best_opportunity_asset
