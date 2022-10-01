@@ -37,13 +37,14 @@ def compute_transfer_fee(amount, liquidity, equilibrium_liquidity, max_fee, equi
     :param equilibrium_fee:
     :param depth:
     :return:
-    """
+
     print("amount", amount)
     print("liquidity", liquidity)
     print("equilibrium_liquidity", equilibrium_liquidity)
     print("max_fee", max_fee)
     print("equilibrium_fee", equilibrium_fee)
     print("excess_state_transfer_fee", excess_state_transfer_fee)
+    """
     resulting_liquidity = liquidity - amount
     if resulting_liquidity > equilibrium_liquidity:
         transfer_fee_percentage = excess_state_transfer_fee
