@@ -1,0 +1,15 @@
+Asset,ToChain,Fee
+ETH,Ethereum,0.000768
+ETH,BSC,0.000065
+ETH,Arbitrum,0.0
+ETH,optimism,0.0
+USDC,Ethereum,3.2
+USDC,Avalanche,1.0
+USDC,Polygon,0.8
+USDC,BSC,0.8
+USDC,Fantom,1.0
+USDT,Ethereum,3.2
+USDT,Avalanche,0.8
+USDT,Polygon,0.8
+USDT,BSC,0.8
+USDT,Fantom,1.0

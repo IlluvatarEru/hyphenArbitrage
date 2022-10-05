@@ -1,9 +1,10 @@
 from src.blockchain_rpc import BlockchainRpcApi
 from src.coingecko import get_prices
+from src.constants import STARTING_CHAIN
 from src.hyphen_liquidity_pools import compute_amount_received, compute_received_reward, compute_transfer_fee, \
     compute_imbalance
 from src.hyphen_rpc import HyphenRpcApi
-from src.read import read_liquidity_pools, read_supported_assets, read_chain_ids
+from src.read import read_liquidity_pools, read_supported_assets, read_chain_ids, read_binance_withdrawal_fees
 
 
 def get_wallet_balance_eth():
@@ -14,13 +15,22 @@ def get_wallet_balance_eth():
     return int(1e18 * 10)
 
 
-def compute_bridged_back_amount(amount):
+def compute_bridged_back_amount(amount, chain_from, chain_to, asset):
     """
     TODO: How to estimate the bridged back amount via other bridges and how much it is going to cost
+    :param asset:
+    :param chain_to:
+    :param chain_from:
     :param amount:
     :return:
     """
-    return amount * (1 - 0.0 / 100)
+    if chain_to == 'BSC':
+        # then we bridge back to the BSC using our deposit address on Binance
+        fees = read_binance_withdrawal_fees()
+        result = amount - fees.loc[(fees['Asset'] == asset) & (fees['ToChain'] == STARTING_CHAIN), 'Fee'].max()
+    else:
+        result = amount * (1 - 0.0 / 100)
+    return result
 
 
 def compute_max_profit(incentive_pool,

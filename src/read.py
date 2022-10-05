@@ -12,3 +12,8 @@ def read_supported_assets():
 def read_chain_ids():
     chain_ids = pd.read_csv('C:/dev/hyphenArbitrage/src/resources/chains.csv')
     return dict(chain_ids.values)
+
+
+def read_binance_withdrawal_fees():
+    fees = pd.read_csv('C:/dev/hyphenArbitrage/src/resources/binance_withdrawal_fees.csv')
+    return fees
