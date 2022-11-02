@@ -33,7 +33,10 @@ def compute_bridged_back_amount(amount, chain_from, chain_to, asset):
     return result
 
 
-def compute_max_profit(incentive_pool,
+def compute_max_profit(chain_from,
+                       chain_to,
+                       asset,
+                       incentive_pool,
                        liquidity_from, equilibrium_liquidity_from,
                        liquidity_to, equilibrium_liquidity_to,
                        gas_fee, max_fee=0,
@@ -41,7 +44,10 @@ def compute_max_profit(incentive_pool,
                        excess_state_transfer_fee=0,
                        depth=2):
     amount = compute_imbalance(equilibrium_liquidity_from, liquidity_from)
-    profit = compute_profit(amount, incentive_pool,
+    profit = compute_profit(chain_from,
+                            chain_to,
+                            asset,
+                            amount, incentive_pool,
                             liquidity_from, equilibrium_liquidity_from,
                             liquidity_to, equilibrium_liquidity_to,
                             gas_fee, max_fee, equilibrium_fee,
@@ -50,7 +56,10 @@ def compute_max_profit(incentive_pool,
     return profit, amount
 
 
-def compute_profit(amount, incentive_pool,
+def compute_profit(chain_from,
+                   chain_to,
+                   asset,
+                   amount, incentive_pool,
                    liquidity_from, equilibrium_liquidity_from,
                    liquidity_to, equilibrium_liquidity_to,
                    gas_fee, max_fee=0,
@@ -69,7 +78,7 @@ def compute_profit(amount, incentive_pool,
         amount_received = compute_amount_received(amount + reward, transfer_fee, gas_fee)
         # print("amount_received", amount_received)
         # compute what you would get by bridging back to the fromChain using native bridges or others
-        bridged_back_amount = compute_bridged_back_amount(amount_received)
+        bridged_back_amount = compute_bridged_back_amount(amount_received, chain_from, chain_to, asset)
         return bridged_back_amount - amount
     else:
         return 0
@@ -138,7 +147,10 @@ def check_arbitrage_opportunities():
                 hypen_rpc = HyphenRpcApi(chain_id_from, chain_id_to, asset_from, 1)
                 true_gas = hypen_rpc.get_gas_fee() * 1e18
 
-                profit_for_max_amount_in, max_amount_in = compute_max_profit(incentive_pool,
+                profit_for_max_amount_in, max_amount_in = compute_max_profit(blockchain_from,
+                                                                             blockchain_to,
+                                                                             asset_symbol,
+                                                                             incentive_pool,
                                                                              liquidity_from,
                                                                              equilibrium_liquidity_from,
                                                                              liquidity_to,
@@ -150,7 +162,10 @@ def check_arbitrage_opportunities():
                                                                              excess_state_transfer_fee=excess_state_transfer_fee_to)
                 wallet_balance_asset = wallet_balance_usdc / asset_price
                 if max_amount_in > wallet_balance_asset:
-                    profit = compute_profit(wallet_balance_asset, incentive_pool,
+                    profit = compute_profit(blockchain_from,
+                                            blockchain_to,
+                                            asset_symbol,
+                                            wallet_balance_asset, incentive_pool,
                                             liquidity_from, equilibrium_liquidity_from,
                                             liquidity_to, equilibrium_liquidity_to,
                                             gas_fee=0,
